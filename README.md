@@ -16,3 +16,4 @@ Host'ta certbot kurulu
 
 - 0 3 * * 5 certbot renew --pre-hook "docker stop mailman-nginx" --post-hook "docker start mailman-nginx" --quiet
 
+cp mailman.con /opt/mailman/nginx/conf.d/mailman.conf
