@@ -1,0 +1,168 @@
+version: '2'
+
+services:
+  mailman-core:
+    #image: maxking/mailman-core:0.4
+    image: ghcr.io/maxking/mailman-core:0.5.2
+    container_name: mailman-core
+    hostname: mailman-core
+    restart: unless-stopped
+    volumes:
+      - /opt/mailman/core:/opt/mailman/
+    stop_grace_period: 30s
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      - MAILMAN_RUNNER_OUT_ENABLED=yes
+      - DATABASE_URL=postgresql://mailman:Beni-Degistirmeyi-Unutma@database/mailmandb
+      - DATABASE_TYPE=postgres
+      - DATABASE_CLASS=mailman.database.postgresql.PostgreSQLDatabase
+      - HYPERKITTY_API_KEY=COK-GIZLI-HYPERKITTY_API_KEY
+      - SMTP_HOST=mailman-postfix
+      - SMTP_PORT=25
+      - SMTP_VERIFY_HOSTNAME=false
+      - SMTP_VERIFY_CERT=false
+      - MTA=postfix
+
+    ports:
+      - "127.0.0.1:8001:8001"
+      - "127.0.0.1:8024:8024"
+    networks:
+      - mailman
+    healthcheck:
+      test: ["CMD-SHELL", "ss -tlnp 2>/dev/null | grep -q ':8001 ' || netstat -tlnp 2>/dev/null | grep -q ':8001 '"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 123s
+
+  postfix:
+    #image: boky/postfix
+    image: boky/postfix:5.1.0-debian
+    container_name: mailman-postfix
+    restart: always
+    ports:
+      - "25:25"
+      - "587:587"
+    environment:
+      # TEMEL POSTFIX AYARLARI
+      - POSTFIX_myhostname=list.domain.com
+      - POSTFIX_mydomain=list.domain.com
+      - POSTFIX_mydestination=localhost.$mydomain, localhost  
+
+      # MAILMAN ENTEGRASYONU ICIN 
+      - POSTFIX_transport_maps=regexp:/opt/mailman/core/var/data/postfix_lmtp
+      - POSTFIX_local_recipient_maps=regexp:/opt/mailman/core/var/data/postfix_lmtp
+      - POSTFIX_relay_domains=
+
+      # AG VE GUVENLIK AYARLARI
+      - POSTFIX_mynetworks=172.17.0.0/16, 172.31.8.0/24, 127.0.0.0/8, 172.19.199.0/24, 172.16.0.0/12, 10.0.0.0/8, 192.168.0.0/16, 172.24.0.0/24, 172.26.0.0/24
+      - RELAY_NETWORKS=127.0.0.0/8, 172.16.0.0/12, 172.24.0.0/24, 172.17.0.0/16
+      - ALLOWED_SENDER_DOMAINS=list.domain.com list2.domain2.com # Dkim icin sadece burasi guncellenmeli && (docker compose up -d --force-recreate postfix)
+      - ALLOWED_RECIPIENTS=*
+      - RELAY_RECIPIENTS=*
+      - RELAY_SENDERS=*
+      - inet_protocols=ipv4
+      - RELAY_ACCESS=permit_mynetworks, permit_sasl_authenticated, reject
+      - POSTFIX_smtpd_recipient_restrictions=permit_mynetworks,reject_unauth_destination
+      - RELAY_HOST=${POSTFIX_RELAY_HOST:-}
+      - RELAY_PORT=${POSTFIX_RELAY_PORT:-}
+      - RELAY_USER=${POSTFIX_RELAY_USER:-}
+      - RELAY_PASSWORD=${POSTFIX_RELAY_PASSWORD:-}
+
+      # Postfix dkim entegrasyon
+      - POSTFIX_smtpd_milters=inet:127.0.0.1:8891
+      - POSTFIX_non_smtpd_milters=inet:127.0.0.1:8891
+      - POSTFIX_milter_protocol=6
+      - POSTFIX_milter_default_action=accept
+      #- POSTFIX_milter_default_action=tempfail
+
+      # DKIM AYARLARI 
+      - ENABLE_DKIM=1
+      - DKIM_AUTOGENERATE=1
+      - DKIM_SELECTOR=mail
+      - DKIM_MODE=sv
+    volumes:
+      - /opt/mailman/postfix:/etc/postfix
+      - /opt/mailman/core/var/data:/opt/mailman/core/var/data:ro  # postfix_lmtp icin
+      - /opt/mailman/dkim:/etc/opendkim/keys                      # dkim otomatik key uretimi icin
+    networks:
+      - mailman
+    cap_add:
+      - NET_ADMIN
+    healthcheck:
+      test: ["CMD", "postfix", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  mailman-web:
+    #image: maxking/mailman-web:0.4
+    image: ghcr.io/maxking/mailman-web:0.5.2
+    container_name: mailman-web
+    hostname: mailman-web
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    volumes:
+      - /opt/mailman/web:/opt/mailman-web-data
+    environment:
+      - DATABASE_TYPE=postgres
+      - DATABASE_URL=postgresql://mailman:Beni-Degistirmeyi-Unutma@database/mailmandb
+      - HYPERKITTY_API_KEY=COK-GIZLI-HYPERKITTY_API_KEY
+      - SERVE_FROM_DOMAIN=list.domain.com
+      - MAILMAN_ADMIN_USER=admin
+      - MAILMAN_ADMIN_EMAIL=admin@birinindomaini.com
+      - SECRET_KEY=COK-Secret-KEY-Degistirmeyi-Unutma
+    ports:
+      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:8080:8080"
+    networks:
+      - mailman
+
+  database:
+    environment:
+      - POSTGRES_DB=mailmandb
+      - POSTGRES_USER=mailman
+      - POSTGRES_PASSWORD=Beni-Degistirmeyi-Unutma
+    image: postgres:12-alpine
+    container_name: mailman-database
+    restart: always
+    volumes:
+      - /opt/mailman/database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready --dbname mailmandb --username mailman"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mailman
+
+  nginx:
+    image: nginx:alpine
+    container_name: mailman-nginx
+    restart: unless-stopped
+    depends_on:
+      - mailman-web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /opt/mailman/nginx/conf.d:/etc/nginx/conf.d:ro
+      - /opt/mailman/nginx/ssl:/etc/nginx/ssl:ro
+      - /opt/mailman/web/static:/opt/mailman/web/static:ro
+      - /opt/mailman/nginx/logs:/var/log/nginx
+      - /etc/letsencrypt:/etc/letsencrypt:ro                      # cetbot renew icin
+      - /etc/letsencrypt/archive:/etc/letsencrypt/archive:ro      # linklerde sorun cikarmamasi icin
+    networks:
+      - mailman
+
+networks:
+  mailman:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.19.199.0/24
