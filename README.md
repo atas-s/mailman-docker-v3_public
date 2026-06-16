@@ -14,7 +14,7 @@
 - github: Profil → Settings > SSH and GPG keys > New SSH key
 - Test: ssh -T git@github.com
 -  cd /opt
--  git clone git@github.com:atas-s/mailman-docker.git
+-  git clone git@github.com:atas-s/mailman-docker-v3_public.git
 	
 
 5. Dizinleri olustur & nginx config yukle
