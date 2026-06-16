@@ -105,7 +105,7 @@ services:
       - HYPERKITTY_API_KEY=HYPERKITTY_API_KEY_Parolasi_Degistir
       - SERVE_FROM_DOMAIN=list.domain1.org
       - MAILMAN_ADMIN_USER=admin
-      - MAILMAN_ADMIN_EMAIL=sener@kebikec.net
+      - MAILMAN_ADMIN_EMAIL=birileri@domain.com
       - SECRET_KEY=MailmanWeb_SecretKey_Degistir
     ports:
       - "127.0.0.1:8000:8000"
