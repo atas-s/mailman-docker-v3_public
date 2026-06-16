@@ -38,9 +38,9 @@ OLD_SECRET_KEY=$(grep "SECRET_KEY=" "$COMPOSE_FILE" | cut -d'=' -f2)
 OLD_DOMAIN1=$(grep "POSTFIX_myhostname=" "$COMPOSE_FILE" | cut -d'=' -f2)
 OLD_NGINX_DOMAIN=$(grep "server_name" "$NGINX_FILE" | head -n 1 | awk '{print $2}' | tr -d ';')
 
-# İkincil domaini virgülün sağından ayırarak oku
-RELAY_DOMAINS=$(grep "POSTFIX_relay_domains=" "$COMPOSE_FILE" | cut -d'=' -f2-)
-OLD_DOMAIN2=$(echo "$RELAY_DOMAINS" | awk -F',' '{print $2}' | tr -d ' ')
+# 🛡️ DÜZELTME: İkincil domaini okurken yorum satırlarını (#) ve boşlukları temizle
+RELAY_DOMAINS=$(grep "POSTFIX_relay_domains=" "$COMPOSE_FILE" | cut -d'=' -f2- | cut -d'#' -f1 | tr -d ' ')
+OLD_DOMAIN2=$(echo "$RELAY_DOMAINS" | awk -F',' '{print $2}')
 
 echo -e "${GREEN}✅ Eski değerler başarıyla okundu.${NC}"
 echo ""
@@ -67,11 +67,11 @@ NEW_HK_KEY=${NEW_HK_KEY:-$OLD_HK_KEY}
 read -p "6. Yeni Mailman Web Secret Key [$OLD_SECRET_KEY]: " NEW_SECRET_KEY
 NEW_SECRET_KEY=${NEW_SECRET_KEY:-$OLD_SECRET_KEY}
 
+# 🛡️ DÜZELTME: Varsayılan değer atamasını kaldırdık. Boş geçilirse gerçekten boş kalsın.
 read -p "7. Yeni İkincil Domain (Yoksa boş Enter'a basın) [$OLD_DOMAIN2]: " NEW_DOMAIN2
-NEW_DOMAIN2=${NEW_DOMAIN2:-$OLD_DOMAIN2}
 
 echo ""
-echo -e "${GREEN}⏳ Dosyalar kopyalanıyor ve yeni değerlerle düzenleniyor...${NC}"
+echo -e "${GREEN}⏳ Dosyalar kopyalanıyor, düzenleniyor ve temizleniyor...${NC}"
 
 # 1. Docker Compose Dosyasını Kopyala ve İşle
 cp "$COMPOSE_FILE" "$NEW_COMPOSE_FILE"
@@ -82,13 +82,17 @@ sed -i "s|${OLD_PG_PASS}|${NEW_PG_PASS}|g" "$NEW_COMPOSE_FILE"
 sed -i "s|${OLD_HK_KEY}|${NEW_HK_KEY}|g" "$NEW_COMPOSE_FILE"
 sed -i "s|${OLD_SECRET_KEY}|${NEW_SECRET_KEY}|g" "$NEW_COMPOSE_FILE"
 
-# İkincil domain değişimi
+# 🛡️ DÜZELTME: İkincil domain değişimi ve silme mantığı
 if [ -n "$OLD_DOMAIN2" ]; then
-    if [ -n "$NEW_DOMAIN2" ] && [ "$NEW_DOMAIN2" != "$OLD_DOMAIN2" ]; then
+    # Eğer kullanıcı yeni bir domain girdiyse ve bu 'yok' değilse değiştir
+    if [ -n "$NEW_DOMAIN2" ] && [ "$NEW_DOMAIN2" != "yok" ]; then
         sed -i "s|${OLD_DOMAIN2}|${NEW_DOMAIN2}|g" "$NEW_COMPOSE_FILE"
-    elif [ -z "$NEW_DOMAIN2" ] || [ "$NEW_DOMAIN2" == "yok" ]; then
+    else
+        # Kullanıcı boş geçtiyse veya 'yok' yazdıysa, eskisini dosyadan tamamen sil
+        # Virgülle ayrılmışsa (relay_domains)
         sed -i "s|,${OLD_DOMAIN2}||g" "$NEW_COMPOSE_FILE"
-        sed -i "s|${OLD_DOMAIN2} ||g" "$NEW_COMPOSE_FILE"
+        # Boşlukla ayrılmışsa (sender_domains)
+        sed -i "s| ${OLD_DOMAIN2}||g" "$NEW_COMPOSE_FILE"
     fi
 fi
 
@@ -98,11 +102,15 @@ cp "$NGINX_FILE" "$NEW_NGINX_FILE"
 sed -i "s|${OLD_NGINX_DOMAIN}|${NEW_NGINX_DOMAIN}|g" "$NEW_NGINX_FILE"
 sed -i "s|${OLD_DOMAIN1}|${NEW_DOMAIN1}|g" "$NEW_NGINX_FILE"
 
-echo -e "${GREEN}✅ Yeni konfigürasyon dosyaları oluşturuldu.${NC}"
+# Windows satır sonu karakterlerini (\r) temizle
+sed -i 's/\r$//' "$NEW_COMPOSE_FILE"
+sed -i 's/\r$//' "$NEW_NGINX_FILE"
+
+echo -e "${GREEN}✅ Yeni konfigürasyon dosyaları oluşturuldu ve kontrol karakterleri temizlendi.${NC}"
 echo ""
 
 # ==============================================================================
-# YENİ EKLENEN BÖLÜM: Klasör oluşturma, kopyalama ve bilgilendirme
+# KLASÖR OLUŞTURMA, KOPYALAMA VE BİLGİLENDİRME
 # ==============================================================================
 
 # 1. Klasör Oluşturma
@@ -155,7 +163,7 @@ if [[ "$COPY_COMPOSE" =~ ^[Yy]$ ]]; then
     echo -e "${GREEN}✅ Docker compose dosyası hedef dizine kopyalandı.${NC}"
 fi
 
-# 4. Final Bilgilendirme (Komutlar çalıştırılmaz, sadece gösterilir)
+# 4. Final Bilgilendirme
 echo ""
 echo -e "${GREEN}==================================================${NC}"
 echo -e "${GREEN} 🎉 İŞLEM TAMAMLANDI - SONRASI İÇİN BİLGİLENDİRME${NC}"
