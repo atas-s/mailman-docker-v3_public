@@ -1,5 +1,9 @@
 ### Mailman v3 docker (adimlarda eksiklikler olabilir & Gelistiriliyor)
+
+0. generate_dockerfile.sh betigini calistirmak en kolayi. Calismazsa asagidaki adimlar izlenebilir
+   
 1. Docker guncelle
+   
   - domain isimleri guncellenmeli
 
 2. DNS/cloudflare guncelle 
