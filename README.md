@@ -1,8 +1,10 @@
 ### Mailman v3 docker (adimlarda eksiklikler olabilir & Gelistiriliyor)
 
 0. generate_dockerfile.sh betigini calistirmak en kolayi. Calismazsa asagidaki adimlar izlenebilir
+   	- docker ayaga kalktiginda 8. adima gecilebilir
+   	- admin onayi alindiktan ve login oldutan sonra default domain'in arayuzden yine de yaratilmasi gerekir
    
-1. Docker guncelle
+2. Docker guncelle
    
   - domain isimleri guncellenmeli
 
