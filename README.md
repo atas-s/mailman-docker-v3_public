@@ -9,7 +9,7 @@
 	apt update; apt install -y docker.io docker-compose git curl docker-buildx docker-cli docker-compose
 
 4. Git için anahtar oluşturup github'a ekle
-- ssh-keygen -t ed25519 -C "atas_s@yahoo.com
+- ssh-keygen -t ed25519 -C "bisey@domain.com
 - cat ~/.ssh/id_ed25519.pub
 - github: Profil → Settings > SSH and GPG keys > New SSH key
 - Test: ssh -T git@github.com
