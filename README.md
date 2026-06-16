@@ -42,8 +42,8 @@
 - certbot certonly --standalone   -d list.domain1.org   --email bisey@domain.com   --agree-tos   --no-eff-email
 
 8. mailman admin sifresi resetle
-- docker exec -it mailman-web bash
-- python manage.py changepassword admin
+	- docker exec -it mailman-web bash
+	- python manage.py changepassword admin
 
 - Ilk login denemesinde onay maili gonderiyor;
 - Onay mail icerigi goruntulemek icin; (url'deki ssl'e dikkat;
