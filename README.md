@@ -1,6 +1,6 @@
 ### Mailman v3 docker (adimlarda eksiklikler olabilir & Gelistiriliyor)
 
-0. generate_dockerfile.sh betigini calistirmak en kolayi. Calismazsa asagidaki adimlar izlenebilir
+0. generate_dockerfile.sh betigini calistirmak en kolayi. Calismazsa 1. adimdan sonrasi izlenebilir
    	- docker ayaga kalktiginda 8. adima gecilebilir
    	- admin onayi alindiktan ve login oldutan sonra default domain'in arayuzden yine de yaratilmasi gerekir
    
