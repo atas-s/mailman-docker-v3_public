@@ -127,7 +127,7 @@ services:
       - POSTGRES_DB=mailmandb
       - POSTGRES_USER=mailman
       - POSTGRES_PASSWORD=Beni-Degistirmeyi-Unutma
-    image: postgres:12-alpine
+    image: postgres:16-alpine
     container_name: mailman-database
     restart: always
     volumes:
